@@ -17,20 +17,15 @@ def get_titles_from_search_results(filename):
 
     [('Book title 1', 'Author 1'), ('Book title 2', 'Author 2')...]
     """
-
-    bookTitles_authors = []
-    f = open(filename)
-    soup = BeautifulSoup(f, 'html.parser')
-    f.close()
-    find = soup.find('div', class_ = "mainContentContainer")
-    books = find.find_all('tr')
-    for book in books:
-        titlee = book.find('a', class_ = 'bookTitle')
-        title = titlee.find('span').text
-        authorr = book.find('a', class_ = 'authorName')
-        author = authorr.find('span').text
-        bookTitles_authors.append((title, author))
-    return bookTitles_authors
+    soup = BeautifulSoup(open('search_results.htm'), 'html.parser')
+    bookTitleAuthors = []
+    for book in soup.findAll('tr', itemtype = 'http://schema.org/Book'):
+        data = book.findAll('span', itemprop = 'name')
+        title = data[0].string.strip()
+        author = data[1].string.strip()
+        bookTitleAuthors.append((title, author))
+    #print(bookTitleAuthors[0])  
+    return bookTitleAuthors
 
 
 def get_search_links():
@@ -102,7 +97,7 @@ def summarize_best_books(filepath):
         items = soup.find_all('div', class_ = 'category clearFix')
         for item in items:
             category = item.h4.text.strip()
-            title1 = item.find('div', class_ = 'category_winnerImageContest')
+            title1 = item.find('div', class_ = 'category__winnerImageContainer')
             title2 = title1.find('img', alt = True)
             title3 = title2['alt']
             url = item.find('a').get('href')
@@ -155,17 +150,18 @@ class TestCases(unittest.TestCase):
 
     def test_get_titles_from_search_results(self):
         # call get_titles_from_search_results() on search_results.htm and save to a local variable
-
+        var = get_titles_from_search_results('search_results.htm')
         # check that the number of titles extracted is correct (20 titles)
-
+        self.assertEqual(len(var), 20)
         # check that the variable you saved after calling the function is a list
-
+        self.assertEqual(type(var), list)
         # check that each item in the list is a tuple
-
+        for item in var:
+            self.assertEqual(type(item), tuple)
         # check that the first book and author tuple is correct (open search_results.htm and find it)
-
+        self.assertEqual(var[0], ('Harry Potter and the Deathly Hallows (Harry Potter, #7)', 'J.K. Rowling'))
         # check that the last title is correct (open search_results.htm and find it)
-        pass
+        self.assertEqual(var[-1][0], 'Harry Potter: The Prequel (Harry Potter, #0.5)')
 
     def test_get_search_links(self):
         # check that TestCases.search_urls is a list
@@ -221,21 +217,23 @@ class TestCases(unittest.TestCase):
 
     def test_write_csv(self):
         # call get_titles_from_search_results on search_results.htm and save the result to a variable
-
+        dir = os.path.dirname(__file__)
+        books = get_titles_from_search_results('search_results.htm')
         # call write csv on the variable you saved and 'test.csv'
-
+        write_csv(books, "best_books_2020.csv")
         # read in the csv that you wrote (create a variable csv_lines - a list containing all the lines in the csv you just wrote to above)
-
+        inFile = open(os.path.join(dir, "best_books_2020.csv"), 'r')
+        lines = inFile.readlines()
 
         # check that there are 21 lines in the csv
-
+        self.assertEqual(len(lines), 21)
         # check that the header row is correct
-
+        self.assertEqual(lines[0].strip(), "Book Title, Author Name")
         # check that the next row is 'Harry Potter and the Deathly Hallows (Harry Potter, #7)', 'J.K. Rowling'
-
+        self.assertEqual(lines[1].strip(), 'Harry Potter and the Deathly Hallows (Harry Potter, #7)', 'J.K. Rowling')
         # check that the last row is 'Harry Potter: The Prequel (Harry Potter, #0.5)', 'J.K. Rowling'
-
-        pass
+        self.assertEqual(lines[-1].strip(), 'Harry Potter: The Prequel (Harry Potter, #0.5)', 'J.K. Rowling')
+        
 
 if __name__ == '__main__':
     print(extra_credit("extra_credit.htm"))
